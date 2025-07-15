@@ -1,166 +1,356 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Advanced QR Code Scanner</title>
-<style>
-  * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: Arial, sans-serif;
-  }
-  body, html {
-    height: 100%;
-    width: 100%;
-    overflow: hidden;
-    transition: background 0.5s, color 0.5s;
-  }
-  video {
-    width: 100vw;
-    height: 100vh;
-    object-fit: cover;
-    position: absolute;
-    top: 0;
-    left: 0;
-  }
-  .overlay-box {
-    border: 4px solid #00ff00;
-    border-radius: 20px;
-    width: 250px;
-    height: 250px;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    box-shadow: 0 0 15px rgba(0, 255, 0, 0.7);
-    pointer-events: none;
-  }
-  .controls {
-    position: absolute;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    gap: 15px;
-    z-index: 2;
-  }
-  button {
-    padding: 12px 20px;
-    font-size: 16px;
-    border-radius: 10px;
-    border: none;
-    cursor: pointer;
-    background: #00ff00;
-    color: #000;
-    font-weight: bold;
-    transition: background 0.3s, color 0.3s;
-  }
-  button:hover {
-    background: #00cc00;
-  }
-  .result-box {
-    position: absolute;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(0, 0, 0, 0.6);
-    color: #00ff00;
-    padding: 15px 25px;
-    border-radius: 12px;
-    font-size: 18px;
-    text-align: center;
-    max-width: 90%;
-    word-break: break-all;
-  }
-  .result-box a {
-    color: #00ff00;
-    text-decoration: underline;
-  }
-  body.dark {
-    background: #111;
-    color: #eee;
-  }
-  .dark .result-box {
-    background: rgba(255, 255, 255, 0.1);
-    color: #00ff00;
-  }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Barcode Scanner</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-dark: #2563eb;
+            --secondary: #f8fafc;
+            --dark: #1e293b;
+            --success: #10b981;
+            --error: #ef4444;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f1f5f9;
+            color: var(--dark);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .scanner-container {
+            width: 100%;
+            max-width: 800px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .scanner-header {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .scanner-header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+        #scanner-viewport {
+            width: 100%;
+            height: 300px;
+            background: #000;
+            position: relative;
+            overflow: hidden;
+        }
+        .scan-overlay {
+            position: absolute;
+            top: 0;
+            left: 10%;
+            width: 80%;
+            height: 3px;
+            background: rgba(255, 255, 255, 0.5);
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.8);
+            animation: scan 2s infinite linear;
+            z-index: 10;
+        }
+        @keyframes scan {
+            0% { top: 0; }
+            100% { top: 100%; }
+        }
+        .controls {
+            padding: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+        .btn-secondary {
+            background: var(--secondary);
+            color: var(--dark);
+            border: 1px solid #cbd5e1;
+        }
+        .btn-secondary:hover {
+            background: #e2e8f0;
+        }
+        .status {
+            padding: 15px;
+            margin: 0 20px 20px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .status-info {
+            background: #dbeafe;
+            color: var(--primary);
+        }
+        .status-success {
+            background: #dcfce7;
+            color: var(--success);
+        }
+        .status-error {
+            background: #fee2e2;
+            color: var(--error);
+        }
+        .result-area {
+            padding: 20px;
+        }
+        #result {
+            padding: 15px;
+            background: #f8fafc;
+            border-radius: 8px;
+            margin-top: 10px;
+            word-break: break-all;
+        }
+        .history {
+            margin-top: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .history-item {
+            padding: 10px;
+            background: #f8fafc;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .hidden {
+            display: none;
+        }
+        @media (max-width: 600px) {
+            #scanner-viewport {
+                height: 250px;
+            }
+            .scanner-header h1 {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
 </head>
 <body>
+    <div class="scanner-container">
+        <div class="scanner-header">
+            <h1><i class="fas fa-barcode"></i> Barcode Scanner</h1>
+        </div>
+        
+        <div id="scanner-viewport">
+            <div class="scan-overlay hidden"></div>
+        </div>
+        
+        <div id="status" class="status status-info">
+            <i class="fas fa-info-circle"></i>
+            <span id="status-text">Click "Start Scanner" to begin</span>
+        </div>
+        
+        <div class="controls">
+            <button id="startBtn" class="btn btn-primary">
+                <i class="fas fa-play"></i> Start Scanner
+            </button>
+            <button id="stopBtn" class="btn btn-secondary" disabled>
+                <i class="fas fa-stop"></i> Stop Scanner
+            </button>
+            <button id="copyBtn" class="btn btn-secondary" disabled>
+                <i class="fas fa-copy"></i> Copy
+            </button>
+        </div>
+        
+        <div class="result-area">
+            <h3>Scan Result</h3>
+            <div id="result">No barcode detected yet</div>
+            
+            <div class="history">
+                <h3>Scan History</h3>
+                <div id="historyList"></div>
+            </div>
+        </div>
+    </div>
 
-<video id="video" autoplay playsinline></video>
-<div class="overlay-box"></div>
-
-<div class="controls">
-  <button id="darkModeBtn">Dark Mode</button>
-  <button id="flashBtn">Flash On</button>
-  <button id="restartBtn">Scan Again</button>
-</div>
-
-<div id="result" class="result-box">Scanning...</div>
-
-<script src="https://unpkg.com/html5-qrcode@2.3.10/minified/html5-qrcode.min.js"></script>
-<script>
-const video = document.getElementById('video');
-const resultBox = document.getElementById('result');
-const darkModeBtn = document.getElementById('darkModeBtn');
-const flashBtn = document.getElementById('flashBtn');
-const restartBtn = document.getElementById('restartBtn');
-
-let stream;
-let html5QrCode;
-let flashOn = false;
-
-navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-.then(str => {
-  stream = str;
-  video.srcObject = stream;
-})
-.catch(err => alert("Camera error: " + err));
-
-function startScanner() {
-  if (html5QrCode) html5QrCode.stop();
-  html5QrCode = new Html5Qrcode("video");
-  html5QrCode.start(
-    { facingMode: "environment" },
-    { fps: 10, qrbox: 250 },
-    qrCodeMessage => {
-      resultBox.innerHTML = `<a href="${qrCodeMessage}" target="_blank">${qrCodeMessage}</a>`;
-      html5QrCode.stop();
-    },
-    errorMessage => {}
-  ).catch(err => {
-    resultBox.textContent = "Scanner error: " + err;
-  });
-}
-setTimeout(startScanner, 1500);
-
-restartBtn.onclick = function() {
-  resultBox.innerHTML = "Scanning...";
-  startScanner();
-};
-
-// Dark Mode Toggle
-darkModeBtn.onclick = function() {
-  document.body.classList.toggle('dark');
-};
-
-// Flashlight Toggle
-flashBtn.onclick = function() {
-  if (!stream) return alert("Camera not ready");
-  const track = stream.getVideoTracks()[0];
-  const capabilities = track.getCapabilities();
-  if (!capabilities.torch) {
-    alert("Flashlight not supported on this device");
-    return;
-  }
-  flashOn = !flashOn;
-  track.applyConstraints({ advanced: [{ torch: flashOn }] });
-  flashBtn.textContent = flashOn ? "Flash Off" : "Flash On";
-};
-</script>
-
+    <script>
+        // DOM Elements
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const copyBtn = document.getElementById('copyBtn');
+        const resultDiv = document.getElementById('result');
+        const statusDiv = document.getElementById('status');
+        const statusText = document.getElementById('status-text');
+        const scanOverlay = document.querySelector('.scan-overlay');
+        const historyList = document.getElementById('historyList');
+        
+        // Variables
+        let isScanning = false;
+        let scanHistory = [];
+        
+        // Initialize Quagga Scanner
+        function initScanner() {
+            Quagga.init({
+                inputStream: {
+                    name: "Live",
+                    type: "LiveStream",
+                    target: document.querySelector('#scanner-viewport'),
+                    constraints: {
+                        width: 640,
+                        height: 480,
+                        facingMode: "environment"
+                    },
+                },
+                decoder: {
+                    readers: [
+                        "ean_reader",
+                        "ean_8_reader",
+                        "code_128_reader",
+                        "upc_reader",
+                        "upc_e_reader",
+                        "code_39_reader",
+                        "code_39_vin_reader",
+                        "codabar_reader",
+                        "qrcode_reader"
+                    ]
+                },
+                locate: true
+            }, function(err) {
+                if (err) {
+                    updateStatus('Scanner error: ' + err, 'error');
+                    console.error(err);
+                    return;
+                }
+                updateStatus('Scanner ready');
+            });
+        }
+        
+        // Start Scanner
+        startBtn.addEventListener('click', () => {
+            if (isScanning) return;
+            
+            updateStatus('Starting scanner...');
+            
+            Quagga.start();
+            scanOverlay.classList.remove('hidden');
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+            isScanning = true;
+            
+            updateStatus('Scanning... Point at a barcode');
+            
+            Quagga.onDetected(function(result) {
+                if (!isScanning) return;
+                
+                const code = result.codeResult.code;
+                const format = result.codeResult.format;
+                
+                handleScan(code, format);
+            });
+        });
+        
+        // Stop Scanner
+        stopBtn.addEventListener('click', () => {
+            if (!isScanning) return;
+            
+            Quagga.stop();
+            scanOverlay.classList.add('hidden');
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            isScanning = false;
+            
+            updateStatus('Scanner stopped');
+        });
+        
+        // Handle Scan Results
+        function handleScan(code, format) {
+            playScanSound();
+            resultDiv.textContent = code;
+            copyBtn.disabled = false;
+            
+            // Add to history
+            scanHistory.unshift({
+                code: code,
+                format: format,
+                time: new Date().toLocaleTimeString()
+            });
+            
+            updateHistory();
+            updateStatus(`Scanned: ${format}`, 'success');
+        }
+        
+        // Update Scan History
+        function updateHistory() {
+            historyList.innerHTML = '';
+            
+            if (scanHistory.length === 0) {
+                historyList.innerHTML = '<p>No scan history yet</p>';
+                return;
+            }
+            
+            scanHistory.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'history-item';
+                div.innerHTML = `
+                    <span>${item.code}</span>
+                    <span>${item.format} • ${item.time}</span>
+                `;
+                historyList.appendChild(div);
+            });
+        }
+        
+        // Copy Result to Clipboard
+        copyBtn.addEventListener('click', () => {
+            if (resultDiv.textContent && resultDiv.textContent !== 'No barcode detected yet') {
+                navigator.clipboard.writeText(resultDiv.textContent)
+                    .then(() => {
+                        updateStatus('Copied to clipboard!', 'success');
+                    })
+                    .catch(err => {
+                        updateStatus('Failed to copy: ' + err, 'error');
+                    });
+            }
+        });
+        
+        // Update Status Messages
+        function updateStatus(message, type = 'info') {
+            statusText.textContent = message;
+            statusDiv.className = 'status';
+            statusDiv.classList.add(`status-${type}`);
+        }
+        
+        // Play Scan Sound
+        function playScanSound() {
+            const audio = new Audio();
+            audio.src = 'https://assets.mixkit.co/sfx/preview/mixkit-achievement-bell-600.mp3';
+            audio.play().catch(e => console.log('Audio play failed:', e));
+        }
+        
+        // Initialize Scanner on Load
+        document.addEventListener('DOMContentLoaded', initScanner);
+    </script>
 </body>
 </html>
